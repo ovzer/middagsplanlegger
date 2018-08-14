@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script type="text/javascript" src="plugins/ics.js"></script>
+	<link type='text/css' rel='stylesheet' href='https://fonts.googleapis.com/css?family=Lato:300,400,700'/>
+	<link href="https://fonts.googleapis.com/css?family=Kalam:300" rel="stylesheet">
+	<title>Kokebok</title>
+
+	<link rel="apple-touch-icon" sizes="57x57" href="favicon/apple-icon-57x57.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="favicon/apple-icon-60x60.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="favicon/apple-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="favicon/apple-icon-76x76.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="favicon/apple-icon-114x114.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="favicon/apple-icon-120x120.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="favicon/apple-icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="favicon/apple-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-icon-180x180.png">
+	<link rel="icon" type="image/png" sizes="192x192"  href="favicon/android-icon-192x192.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="favicon/favicon-96x96.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+	<link rel="manifest" href="favicon/manifest.json">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="favicon/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+
+</head>
+<body>
+	<div id="wrapper">
+		<div id="content">
+			<div id="recipesdiv">
+				<table>
+					<tbody>
+						<tr>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td>
+								<button id="random" class="btn"><img src="icon/shuffle.png" /></button>
+							</td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						<tr class="days">
+							<td>Mandag</td>
+							<td>Tirsdag</td>
+							<td>Onsdag</td>
+							<td>Torsdag</td>
+							<td>Fredag</td>
+							<td>Lørdag</td>
+							<td>Søndag</td>
+						</tr>
+						<tr id="movingRecipes">
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						<tr id="recipes">
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						<tr>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td>
+								<button class="btn calendarButton" value="0"><img src="icon/week.png" />Denne</button>
+								<button class="btn calendarButton" value="1"><img src="icon/week.png" />Neste</button>
+							</td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+<script type="text/javascript"> 
+
+var recipes = new Array(),
+	chosenRecipes = new Array(),
+	shuffledRecipes = new Array();
+
+function getRecipeArray() {
+	$.ajax({
+	    url:"getRecipes.php",
+	    type:"POST",
+	    success:function(msg){
+	        recipes = msg;
+	        getRandomRecipes();
+	    },
+	    dataType:"json"
+	});
+}
+
+function getRandomRecipes() {
+	if (shuffledRecipes.length < 7) {
+		shuffledRecipes = shuffle(recipes).slice();
+	}
+	for (i=0; i<7; i++) {
+		if (chosenRecipes[i] == undefined) {
+			chosenRecipes[i] = shuffledRecipes.splice(0,1)[0];
+		} else if (chosenRecipes[i].locked !== true) {
+			chosenRecipes[i] = shuffledRecipes.splice(0,1)[0];
+		}
+	}
+	printRecipes("#recipes");
+}
+
+function randomizeMe(arrId) {
+	if (shuffledRecipes.length < 1) {
+		shuffledRecipes = shuffle(recipes).slice();
+	}
+	if (chosenRecipes[arrId].locked == true) {
+		chosenRecipes[arrId].locked = false;
+		recipes.push(chosenRecipes[arrId]);
+	}
+	chosenRecipes[arrId] = shuffledRecipes.splice(0,1)[0];
+	printRecipes("#recipes");
+}
+
+function lockMe(arrId, recipeId) {
+	if (chosenRecipes[arrId].locked !== true) {
+		chosenRecipes[arrId].locked = true;
+		var arrayNumber = findElementbyAttribute(recipes, "id", recipeId);
+		recipes.splice(arrayNumber,1);
+	} else {
+		chosenRecipes[arrId].locked = false;
+		recipes.push(chosenRecipes[arrId]);
+	}
+	printRecipes("#recipes");
+}
+
+function printRecipes(div) {
+	for (i=0; i<chosenRecipes.length; i++) {
+		if (chosenRecipes[i].placeholder !== true) {
+			if (chosenRecipes[i].locked == true) {
+				var lockClass = "locked";
+			} else {
+				var lockClass = "";
+			}
+			var html = "<div class=\"draggable\" value=\""+chosenRecipes[i].id+"\">"
+			html += "<img src=\"images/"+chosenRecipes[i].image+"\" class=\"foodimg "+lockClass+"\"/>";
+			//html += "<div class=\"recipeButtons\"><img src=\""+lockimg+"\" class=\"lock\" /><img src=\"icon/reload.png\" class=\"reload\" /></div>";
+			if (chosenRecipes[i].typing) {
+				html += "<span class=\"caption\"><div id=\"typeIn\" contenteditable=\"true\" >"+chosenRecipes[i].name+"</div></span></div>";
+			} else {
+				html += "<span class=\"caption\">"+chosenRecipes[i].name+"</span></div>";
+			}
+			$(div+" td:eq("+i+")").html(html);
+		} else {
+			$(div+" td:eq("+i+")").html("<div class=\"placeholder\"></div>");
+		}
+	}
+	/*if ($("#typeIn").length) {
+		console.log("selecting");
+		//selectElementContents(document.getElementById("typeIn"));
+		$("#typeIn").focus();
+	}*/
+}
+
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+
+function findElementbyAttribute(array, attribute, value) {
+    for (var i = 0, len = array.length; i < len; i++) {
+        if (array[i][attribute] == value) {
+            return i; // Return as soon as the object is found
+	    }
+    }
+}
+
+function downloadIcs(weekn) {
+	var monday = getMonday(new Date());
+	monday.setHours(16,0,0,0);
+	var cal = ics();
+	for (i=0; i<7; i++) {
+		var subject = chosenRecipes[i].name;
+		var description = "";
+		if (chosenRecipes[i].link !== undefined) {
+			description = chosenRecipes[i].link;
+		}
+		var begin = new Date(monday);
+		begin.setDate(begin.getDate()+i+7*weekn);
+		var end = new Date(begin);
+		end.setHours(17,30,0,0);
+		cal.addEvent(subject, description, "", begin, end);
+	}
+	var startdate = new Date(monday);
+	startdate.setDate(startdate.getDate()+7*weekn);
+	var enddate = new Date(startdate);
+	enddate.setDate(enddate.getDate()+7*weekn+6)
+	cal.download("Middager for "+startdate.getDate()+"."+(startdate.getMonth()+1)+"-"+enddate.getDate()+"."+(enddate.getMonth()+1));
+}
+
+function getMonday(d) {
+	d = new Date(d);
+	var day = d.getDay(),
+		diff = d.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
+	return new Date(d.setDate(diff));
+}
+
+window.oncontextmenu = function(event) {
+     event.preventDefault();
+     event.stopPropagation();
+     return false;
+};
+
+var dragging = false,
+	clicking = false,
+	mouse = {posX:0, posY:0, mySpot:[0,0], width:0, recipeNumber:0, arrayNumber:0, elementsPositions:[], orgArrayNum:0};
+
+$("#random").on("click", function(ev) {
+	getRandomRecipes();
+})
+
+$(".calendarButton").on("click", function() {
+	var weekn = $(this).attr("value");
+	downloadIcs(weekn);
+})
+
+$(document).on("touchstart mousedown", function(e) {
+	if (e.target.id !== "typeIn") {
+		var rePrint = false;
+		for (i=0; i<chosenRecipes.length; i++) {
+			if (chosenRecipes[i].typing) {
+				if ($("#typeIn").html().trim() == "") {
+					chosenRecipes[i].name = "";
+					chosenRecipes[i].image = "empty.png";
+				} else if (chosenRecipes[i].name !== $("#typeIn").html()) {
+					chosenRecipes[i].name = $("#typeIn").html();
+					chosenRecipes[i].image = "placeholder.jpg";
+				}
+				chosenRecipes[i].typing = false;
+				rePrint = true;
+			}
+		}
+		if (rePrint) {
+			printRecipes("#recipes");
+		}
+	}
+});
+
+$(document).on("touchstart mousedown", ".draggable", function(e) {
+		console.log(e)
+	if (e.target.id !== "typeIn") {
+	    e.preventDefault();
+	    var elementId = parseInt($(this).attr("value"));
+		var elementCopy = $(this).clone();
+		mouse.recipeNumber = elementId;
+		mouse.arrayNumber = findElementbyAttribute(chosenRecipes, "id", elementId);
+		mouse.orgArrayNum = mouse.arrayNumber;
+		elementCopy.addClass("movingCopy");
+		$("body").prepend(elementCopy);
+
+		mouse.elementsPositions = new Array();
+		$('#recipes .draggable').each(function(i, obj) {
+		    mouse.elementsPositions[i] = $(this).parent().offset().left;
+		});
+
+		var offset = $(this).offset();
+		$(".movingCopy").offset(offset);
+		if (e.pageX !== undefined) {
+			var mouseX = e.pageX;
+			var mouseY = e.pageY;
+		} else {
+			var mouseX = e.originalEvent.touches[0].pageX;
+			var mouseY = e.originalEvent.touches[0].pageY;
+		}
+		mouse.posX = mouseX - offset.left;
+		mouse.posY = mouseY - offset.top;
+	    mouse.mySpot = [mouse.elementsPositions[mouse.arrayNumber], mouse.elementsPositions[mouse.arrayNumber+1]];
+	    mouse.width = elementCopy.width()/2;
+		chosenRecipes[mouse.arrayNumber].placeholder = true;
+		printRecipes("#movingRecipes");
+		$("#recipes").hide();
+		$("#movingRecipes").show();
+	    dragging = true;
+	    clicking = true;
+	}
+})
+
+$(document).on("mouseup touchend touchleave touchcancel", function(e) {
+	if (dragging == true) {
+		if (clicking) {
+			if (e.target.className == "caption") {
+				chosenRecipes[mouse.arrayNumber].typing = true;
+			}
+			lockMe(mouse.arrayNumber, mouse.recipeNumber);
+		}
+		dragging = false;
+		$(".movingCopy").remove();
+		for (i=0; i<chosenRecipes.length; i++) {
+			chosenRecipes[i].placeholder = false;
+		}
+		printRecipes("#recipes");
+		$("#recipes").show();
+		$("#movingRecipes").hide();
+	}
+});
+
+Array.prototype.swap = function (x,y) {
+  var b = this[x];
+  this[x] = this[y];
+  this[y] = b;
+  return this;
+}
+
+$(document).on("touchmove mousemove", function(e) {
+	if (dragging == true) {
+		console.log(e)
+		clicking = false;
+		if (e.pageX !== undefined) {
+		    var thisX = e.pageX - mouse.posX,
+		        thisY = e.pageY - mouse.posY;
+		} else {
+		    var thisX = e.originalEvent.touches[0].pageX - mouse.posX,
+		        thisY = e.originalEvent.touches[0].pageY - mouse.posY;
+		}
+
+	    $(".movingCopy").offset({
+	        left: thisX,
+	        top: thisY
+	    });
+
+	    var centerX = thisX+mouse.width;
+
+	    if (centerX > mouse.mySpot[1] && mouse.arrayNumber < 6) {
+			if (mouse.orgArrayNum !== mouse.arrayNumber) {
+		    	chosenRecipes.swap(mouse.arrayNumber, mouse.orgArrayNum)
+			}
+	    	chosenRecipes.swap(mouse.arrayNumber+1, mouse.orgArrayNum)
+	    	mouse.arrayNumber++;
+	    	mouse.mySpot = [mouse.elementsPositions[mouse.arrayNumber], mouse.elementsPositions[mouse.arrayNumber+1]];
+	    } else if (centerX < mouse.mySpot[0] && mouse.arrayNumber > 0) {
+			if (mouse.orgArrayNum !== mouse.arrayNumber) {
+		    	chosenRecipes.swap(mouse.arrayNumber, mouse.orgArrayNum)
+			}
+	    	chosenRecipes.swap(mouse.arrayNumber-1, mouse.orgArrayNum)
+	    	mouse.arrayNumber--;
+	    	mouse.mySpot = [mouse.elementsPositions[mouse.arrayNumber], mouse.elementsPositions[mouse.arrayNumber+1]];
+	    }
+	    printRecipes("#movingRecipes");
+	}
+});
+
+
+$(window).load(function(){
+	getRecipeArray();
+});
+
+</script>
+</body>
+</html>
+
+<style>
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+    display: block;
+}
+body {
+    line-height: 1;
+    -webkit-touch-callout:none;
+	-webkit-user-select:none;
+	-khtml-user-select:none;
+	-moz-user-select:none;
+	-ms-user-select:none;
+	user-select:none;
+	-webkit-tap-highlight-color:rgba(0,0,0,0);
+}
+ol, ul {
+    list-style: none;
+}
+blockquote, q {
+    quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+    content: '';
+    content: none;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	font-family: 'Lato', sans-serif;
+	color:#333;
+	font-size:16px;
+}
+
+html {
+	background: url("images/background.jpg") no-repeat center center fixed;
+	background-size: cover;
+}
+
+#wrapper {
+	position: fixed;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+    overflow: auto;
+}
+
+#content {
+	position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#recipesdiv {
+	display: table;
+	margin: 0 auto;
+    background-color: rgba(255,255,255,1);
+	box-shadow: 0 0 100px 0 rgba(0,0,0,0.6);
+    border-radius: 15px;
+    padding: 2em 1em 2em 1em;
+}
+.locked {
+	box-shadow: 0px 0px 0px 4px rgb(67, 191, 34) !important;
+}
+.btn {
+	margin: 0 auto 0 auto;
+	border: none;
+	background: #544c42;
+	-webkit-border-radius: 4;
+	-moz-border-radius: 4;
+	border-radius: 4px;
+	color: #ffffff;
+	padding: 1em;
+	text-decoration: none;
+	cursor: pointer;
+	outline: none;
+}
+#random {
+	margin-bottom: 2em;
+}
+#random img {
+	width: 4em;
+	vertical-align: middle;
+}
+.calendarButton img {
+	display: block;
+	margin: 0 auto;
+	width: 2em;
+	vertical-align: middle;
+}
+
+.btn:hover {
+	background: #796f62;
+	text-decoration: none;
+}
+.btn:active {
+	background: #46433e;
+}
+
+.draggable {
+    text-align: center;
+    width: 10em;
+    padding: .3em;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+}
+.movingCopy {
+	z-index: 100;
+	position: absolute;
+}
+.movingCopy .caption {
+	text-shadow: 1px 1px 0px rgba(255, 255, 255, 1);
+}
+.placeholder {
+	width: 10em;
+	height: 10em;
+    margin: 0 .3em 0 .3em;
+	display: inline-block;
+	box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.29);
+    border-radius: 5em;
+}
+
+#recipesdiv td {
+	text-align: center;
+}
+.foodimg {
+	object-fit: cover;
+	width: 100%;
+	height: 10em;
+	border-radius: 5em;
+	background-color: #9c9c9c;
+}
+.draggable:hover .foodimg {
+	box-shadow: 0 0 15px 0 rgba(0,0,0,0.3);
+}
+.recipeButtons img:hover {
+	transform:scale(1.5);
+}
+.caption {
+	font-family: 'Kalam', cursive;
+	font-size: 1.5em;
+    display: block;
+    padding: 0.5em 0;
+    height: 3em;
+    overflow: hidden;
+}
+#typeIn {
+	width: 100%;
+	height: auto;
+    border: 1px solid #bbb;
+    box-sizing: border-box;
+    outline: none;
+    padding: 5px 0;
+    margin: -6px 0;
+	box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.29);
+}
+.recipeButtons img {
+	width: 20px;
+}
+.days td {
+	font-size: 0.8em;
+	text-transform: uppercase;
+	font-weight: 800;
+	padding:0.5em 0;
+}
+</style>
